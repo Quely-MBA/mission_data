@@ -1,6 +1,7 @@
 
 import os 
 import json 
+import shutil
 
 
 
@@ -87,21 +88,146 @@ print(" Arborescence de mission data :")
 
 chemin_d_acces_missions = r"C:\Users\DELL\Downloads\mission_data\mission_data_missions.json"
 
-# Charge le fichier missions.json
-# Charge le fichier missions.json
-with open(chemin_d_acces_missions, 'r', encoding='utf-8') as fichier:
-    data = json.load(fichier)
-    missions = data
-   
-print("📋 Résumé des missions :")
-print("-" * 80)
 
-for mission in missions:
-    code = mission["code"]
-    nom = mission["nom"]
-    destination = mission["destination"]
-    duree = mission["duree_jours"]
-    equipage = mission["equipage"]
-    budget = mission["budget_millions"]
+M = open(chemin_d_acces_missions, "r", encoding="utf-8")
+data = json.load(M)
+M.close()
+#Affiche un résumé de chaque mission
+if isinstance(data, dict):
+    for valeur in data.values():
+        if isinstance(valeur, list):
+            data = valeur
+            break
+#Parcourt chaque mission et affiche ses informations
+for m in data:
+    id_m  = m.get("id")
+    nom   = m.get("nom", m.get("name"))
+    dest  = m.get("destination", "N/A")
+    duree = m.get("duree_jours", m.get("duration_days"))
+    eq    = m.get("equipage", m.get("crew_size"))
+    bud   = m.get("budget_millions", m.get("budget"))
+    print(f"[{id_m}] {nom} → {dest} | {duree} jours | Équipage : {eq} | Budget : {bud} M$")
+    
+#initialisation de la variable budget toutal
+budget_total = 0
+
+# Calcule  le **budget total** de toutes les missions
+for m in data:
+    budget = m.get("budget_millions", m.get("budget", 0))
+    budget_total = budget_total + budget
+#affiche le **budget total** de toutes les missions
+print(f"\nBudget total de toutes les missions : {budget_total} M$")
+ 
+
+#on part de None, la première mission trouvée servira de référence
+mission_longue = None
+mission_courte = None
+
+for m in data:
+    duree = m.get("duree_jours", m.get("duration_days", 0))
+
+    # Première mission
+    if mission_longue is None:
+        mission_longue = m
+        mission_courte = m
+
+    elif duree > mission_longue.get("duree_jours", mission_longue.get("duration_days", 0)):
+        mission_longue = m
+
+    elif duree < mission_courte.get("duree_jours", mission_courte.get("duration_days", 0)):
+        mission_courte = m
+
+
+# Affichage des résultats
+nom_long  = mission_longue.get("nom", mission_longue.get("name"))
+duree_long = mission_longue.get("duree_jours", mission_longue.get("duration_days"))
+
+nom_court  = mission_courte.get("nom", mission_courte.get("name"))
+duree_court = mission_courte.get("duree_jours", mission_courte.get("duration_days"))
+
+print(f"\nMission la plus longue : {nom_long} → {duree_long} jours")
+print(f"Mission la plus courte : {nom_court} → {duree_court} jours")  
+
+
+## 🟡 Tâche 4 — Gestion des exceptions : Chargement robuste  
+
+
+def charger_json_securise(chemin):
+    try:
+        if not os.path.exists(chemin):
+            raise FileNotFoundError
+        
+        if os.path.getsize(chemin) == 0:
+            print(f"Erreur : le fichier '{chemin}' est vide.")
+            return None
+        
+        with open(chemin, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        return data
+
+    except FileNotFoundError:
+        print(f"Erreur : le fichier '{chemin}' n'existe pas.")
+        return None
+# Gestion de l'erreur si le fichier contient un JSON invalide
+    except json.JSONDecodeError:
+        print(f"Erreur : le fichier '{chemin}' est mal formé (JSON invalide).")
+        return None
+
+    except Exception as e:
+        print(f"Erreur inattendue : {e}")
+        return None
+
+
+# Chemin complet vers le fichier JSON
+chemin_d_acces_mission_data = r"C:\Users\DELL\Downloads\mission_data\corps_celestes.json"
+data = charger_json_securise(chemin_d_acces_mission_data)
+
+print(data)
+
+
+## 🟡 Tâche 5 — `os` avancé : Commandes système et gestion de fichiers 
+
+
+
+# Dossier principal mission_data
+base_path = r"C:\Users\DELL\Downloads\mission_data"
+
+# Dossier rapports
+rapports_path = os.path.join(base_path, "rapports")
+
+# Fichier rapport
+rapport_path = os.path.join(rapports_path, "rapport_systeme.txt")
+
+# Vérifie que le dossier rapports existe
+if not os.path.exists(rapports_path):
+    os.makedirs(rapports_path)
+
+# Création du rapport système
+with open(rapport_path, "w", encoding="utf-8") as rapport:
+
+    # Répertoire courant
+    rapport.write("=== RÉPERTOIRE COURANT ===\n")
+    rapport.write(os.getcwd() + "\n\n")
+
+    # Variables d’environnement PYTHON / PATH
+    rapport.write("=== VARIABLES D'ENVIRONNEMENT (PYTHON / PATH) ===\n")
+    for cle, valeur in os.environ.items():
+        if "PYTHON" in cle.upper() or "PATH" in cle.upper():
+            rapport.write(f"{cle} = {valeur}\n")
+
+    # Espace disque disponible
+    rapport.write("\n=== ESPACE DISQUE ===\n")
+    total, used, free = shutil.disk_usage(base_path)
+    rapport.write(f"Espace total : {total // (1024**3)} Go\n")
+    rapport.write(f"Espace utilisé : {used // (1024**3)} Go\n")
+    rapport.write(f"Espace libre : {free // (1024**3)} Go\n")
+
+print("Rapport système créé avec succès")
+print(" Emplacement :", rapport_path)
+
+
+
+    
     
     
